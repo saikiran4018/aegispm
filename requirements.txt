@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+langgraph
+anthropic
+python-dotenv
+groq
+pydantic
+httpx
