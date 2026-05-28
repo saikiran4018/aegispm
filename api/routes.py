@@ -47,6 +47,7 @@ def analyze_project(request: AnalyzeRequest):
             "allocations": result.get("allocations"),
             "status_report": result.get("status_report"),
             "progress": result.get("progress"),
+            "solution": result.get("solution"),
             "final_decision": result.get("final_decision"),
             "errors": result.get("errors", []),
         }

@@ -15,7 +15,7 @@ class ProjectState(TypedDict):
     allocations: Optional[dict]
     status_report: Optional[str]
     final_decision: Optional[dict]
-    progress: Optional[dict]
+    solution: Optional[dict]
 
     # ── Metadata ───────────────────────────────────────────────────────────
     errors: list[str]

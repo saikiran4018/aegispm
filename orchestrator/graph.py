@@ -7,6 +7,7 @@ from agents.resource_allocator import run_resource_allocator
 from agents.communicator import run_communicator
 from agents.decision_arbiter import run_decision_arbiter
 from agents.progress_tracker import run_progress_tracker
+from agents.solution_engine import run_solution_engine
 
 
 def build_graph() -> StateGraph:
@@ -17,6 +18,7 @@ def build_graph() -> StateGraph:
     graph.add_node("resource_allocator", run_resource_allocator)
     graph.add_node("communicator", run_communicator)
     graph.add_node("progress_tracker", run_progress_tracker)
+    graph.add_node("solution_engine", run_solution_engine)
     graph.add_node("decision_arbiter", run_decision_arbiter)
 
     graph.set_entry_point("planner")
@@ -24,7 +26,8 @@ def build_graph() -> StateGraph:
     graph.add_edge("risk_monitor", "resource_allocator")
     graph.add_edge("resource_allocator", "communicator")
     graph.add_edge("communicator", "progress_tracker")
-    graph.add_edge("progress_tracker", "decision_arbiter")
+    graph.add_edge("progress_tracker", "solution_engine")
+    graph.add_edge("solution_engine", "decision_arbiter")
     graph.add_edge("decision_arbiter", END)
 
     return graph.compile()
@@ -51,6 +54,7 @@ def run_project_analysis(
         "allocations": None,
         "status_report": None,
         "progress": None,
+        "solution": None,
         "final_decision": None,
         "errors": [],
     }
