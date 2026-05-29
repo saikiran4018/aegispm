@@ -190,3 +190,92 @@ Answer the question based on the project context above.
         return {"answer": result.get("answer", "No answer generated.")}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+class ChatUpdateRequest(BaseModel):
+    message: str
+    current_project: dict
+
+
+@router.post("/chat-update")
+def chat_update(request: ChatUpdateRequest):
+    """
+    Takes a chat message and current project data,
+    understands what the user wants to change,
+    updates the project and re-runs all agents.
+    """
+    from utils.llm import call_llm
+
+    # Step 1: Understand what the user wants to change
+    parse_system = """
+You are a project data modifier. The user will describe a change they want to make to their project.
+Extract what needs to change and return an updated project JSON.
+
+Return ONLY a valid JSON object with this structure:
+{
+  "change_description": "string - what was changed in plain English",
+  "updated_project": {
+    "project_name": "string",
+    "tasks": [
+      {"id": "string", "name": "string", "status": "todo|in_progress|done|blocked", "assignee": "string or null", "due_date": "YYYY-MM-DD or null"}
+    ],
+    "team": [
+      {"name": "string", "role": "string", "capacity_hours": 8}
+    ],
+    "query": "string"
+  }
+}
+
+Rules:
+- Keep everything the same EXCEPT what the user asked to change
+- If user adds a team member, add them to the team array
+- If user marks a task done, change its status to done
+- If user changes deadline, update the due_date
+- If user removes someone, remove them from team
+- Always return the complete updated project
+"""
+
+    current = request.current_project
+    user_message = f"""
+Current project:
+{current}
+
+User wants to change: {request.message}
+
+Return the updated project JSON with the changes applied.
+"""
+
+    try:
+        result = call_llm(parse_system, user_message)
+
+        if result.get("parse_error"):
+            raise HTTPException(status_code=500, detail="Could not understand the change request")
+
+        updated = result.get("updated_project", {})
+        change_desc = result.get("change_description", "Changes applied")
+
+        # Step 2: Re-run all agents with updated project
+        analysis = run_project_analysis(
+            project_id=current.get("project_id", f"proj_{int(__import__('time').time())}"),
+            project_name=updated.get("project_name", current.get("project_name", "Project")),
+            tasks=updated.get("tasks", current.get("tasks", [])),
+            team=updated.get("team", current.get("team", [])),
+            query=updated.get("query", current.get("query", ""))
+        )
+
+        return {
+            "change_description": change_desc,
+            "updated_project": updated,
+            "analysis": {
+                "plan": analysis.get("plan"),
+                "risks": analysis.get("risks"),
+                "allocations": analysis.get("allocations"),
+                "status_report": analysis.get("status_report"),
+                "progress": analysis.get("progress"),
+                "solution": analysis.get("solution"),
+                "final_decision": analysis.get("final_decision"),
+                "errors": analysis.get("errors", []),
+            }
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))    
